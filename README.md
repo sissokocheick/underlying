@@ -205,6 +205,7 @@ cmc.py         the API client: transport, TTL cache (memory + disk), the join
 portfolio.py   positions -> book; the three roll-ups and the risk flags
 app.py         Flask: /api/* and the static front end
 static/        one HTML page, hand-rolled SVG donuts, localStorage
+tests/         18 tests over the roll-up functions, no network needed
 ```
 
 - **stdlib only** for the client (`urllib`, `threading`, `json`). The single
@@ -227,6 +228,20 @@ pip install -r requirements.txt
 export CMC_API_KEY=your-key-here        # .env works too
 python app.py                           # http://127.0.0.1:5000
 ```
+
+## Tests
+
+The roll-up functions are pure — rows in, dicts out — so the logic that produces
+the numbers above is verified without a network call or a key:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v    # 18 tests
+```
+
+Each test asserts one specific claim the app makes: three wrappers collapse to
+one underlying through three issuers, native crypto is never counted as an
+issuer, issuer shares sum over the tokenised book only, and the concentration
+flag's warn/high thresholds sit at 25% / 50%.
 
 ## Deploy
 
