@@ -157,6 +157,24 @@ def create_app() -> Flask:
     def static_files(filename):
         return send_from_directory(app.static_folder, filename)
 
+    # The join table costs ~60 calls and can take a minute when the plan's
+    # 50/min limit is exhausted. A host that times out a request after 30s
+    # would serve a broken demo on every cold start, so it is built now in a
+    # daemon thread: the first request pays nothing.
+    if cmc is not None:
+        import threading
+
+        def warm():
+            try:
+                cmc.universe()
+                cmc.asset_map()
+            except Exception:
+                # A failed warm-up must not kill the server; the first request
+                # rebuilds it and reports the error to the caller instead.
+                pass
+
+        threading.Thread(target=warm, daemon=True).start()
+
     return app
 
 

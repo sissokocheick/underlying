@@ -114,6 +114,9 @@ class CMC:
         # The universe costs ~60 calls to build and the plan allows 50/minute,
         # so it is persisted: a restart reuses it and burns no credits.
         self.cache = Cache(disk_path)
+        # Guards the build: app.py warms it at startup in a background thread,
+        # and a request arriving mid-warm must not start a second walk.
+        self._build_lock = RLock()
         # crypto_id -> token descriptor
         self._universe: dict[int, dict] = {}
         self._universe_built = 0.0
@@ -171,71 +174,75 @@ class CMC:
 
     def universe(self) -> dict[int, dict]:
         """crypto_id -> {symbol, name, issuer_id, issuer_name, rwa_id}."""
-        fresh, cached = self.cache.get("universe", TTL_UNIVERSE)
-        if fresh:
-            self._universe = cached
-            return cached
+        with self._build_lock:
+            # Re-checked inside the lock so a caller that waited on another
+            # thread's build finds the result cached and returns it instead of
+            # walking the issuers a second time.
+            fresh, cached = self.cache.get("universe", TTL_UNIVERSE)
+            if fresh:
+                self._universe = cached
+                return cached
 
-        issuers = []
-        start = 1
-        while True:
-            page = self._get("/v5/real-world-assets/issuers/list", start=start, limit=250)
-            data = page.get("data", {})
-            issuers.extend(data.get("issuers", []))
-            if not data.get("has_more"):
-                break
-            start += 250
-
-        by_crypto: dict[int, dict] = {}
-        by_issuer: dict[str, dict] = {}
-        for iss in issuers:
-            iid = iss["issuer_id"]
-            tokens, start = [], 1
+            issuers = []
+            start = 1
             while True:
-                page = self._get(
-                    "/v5/real-world-assets/issuers", issuer_id=iid, start=start, limit=250
-                )
+                page = self._get("/v5/real-world-assets/issuers/list", start=start, limit=250)
                 data = page.get("data", {})
-                tokens.extend(data.get("tokens", []))
-                if start + 250 >= (data.get("num_tokens") or 0):
+                issuers.extend(data.get("issuers", []))
+                if not data.get("has_more"):
                     break
                 start += 250
 
-            by_issuer[iid] = {
-                "issuer_id": iid,
-                "name": iss.get("name"),
-                "website": iss.get("website"),
-                "logo": iss.get("logo"),
-                "num_tokens": len(tokens),
-            }
-            for tok in tokens:
-                cid = tok.get("crypto_id")
-                if cid is None:
-                    continue
-                # A crypto_id should belong to exactly one issuer. If the API
-                # disagrees, keep the first and record the collision on the
-                # client rather than in the table -- the join is typed
-                # int -> dict, and a stray list value would break every walk.
-                if cid in by_crypto and by_crypto[cid]["issuer_id"] != iid:
-                    self._collisions.append(cid)
-                by_crypto.setdefault(
-                    cid,
-                    {
-                        "crypto_id": cid,
-                        "symbol": tok.get("symbol"),
-                        "name": tok.get("name"),
-                        "issuer_id": iid,
-                        "issuer_name": iss.get("name"),
-                        "rwa_id": tok.get("rwa_id"),
-                    },
-                )
+            by_crypto: dict[int, dict] = {}
+            by_issuer: dict[str, dict] = {}
+            for iss in issuers:
+                iid = iss["issuer_id"]
+                tokens, start = [], 1
+                while True:
+                    page = self._get(
+                        "/v5/real-world-assets/issuers", issuer_id=iid, start=start, limit=250
+                    )
+                    data = page.get("data", {})
+                    tokens.extend(data.get("tokens", []))
+                    if start + 250 >= (data.get("num_tokens") or 0):
+                        break
+                    start += 250
 
-        self._universe = by_crypto
-        self._issuers = by_issuer
-        self.cache.set("universe", by_crypto, disk=True)
-        self.cache.set("issuers", by_issuer, disk=True)
-        self.cache.set("collisions", self._collisions, disk=True)
-        return by_crypto
+                by_issuer[iid] = {
+                    "issuer_id": iid,
+                    "name": iss.get("name"),
+                    "website": iss.get("website"),
+                    "logo": iss.get("logo"),
+                    "num_tokens": len(tokens),
+                }
+                for tok in tokens:
+                    cid = tok.get("crypto_id")
+                    if cid is None:
+                        continue
+                    # A crypto_id should belong to exactly one issuer. If the API
+                    # disagrees, keep the first and record the collision on the
+                    # client rather than in the table -- the join is typed
+                    # int -> dict, and a stray list value would break every walk.
+                    if cid in by_crypto and by_crypto[cid]["issuer_id"] != iid:
+                        self._collisions.append(cid)
+                    by_crypto.setdefault(
+                        cid,
+                        {
+                            "crypto_id": cid,
+                            "symbol": tok.get("symbol"),
+                            "name": tok.get("name"),
+                            "issuer_id": iid,
+                            "issuer_name": iss.get("name"),
+                            "rwa_id": tok.get("rwa_id"),
+                        },
+                    )
+
+            self._universe = by_crypto
+            self._issuers = by_issuer
+            self.cache.set("universe", by_crypto, disk=True)
+            self.cache.set("issuers", by_issuer, disk=True)
+            self.cache.set("collisions", self._collisions, disk=True)
+            return by_crypto
 
     def issuers(self) -> dict[str, dict]:
         self.universe()
