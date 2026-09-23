@@ -1,0 +1,17 @@
+# One-click deploy to Render. CMC_API_KEY is marked sync: false so Render
+# prompts for it instead of reading it from this file -- the key never lands
+# in the repo.
+services:
+  - type: web
+    name: underlying
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: CMC_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.13.0"

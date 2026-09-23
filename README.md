@@ -228,6 +228,16 @@ export CMC_API_KEY=your-key-here        # .env works too
 python app.py                           # http://127.0.0.1:5000
 ```
 
+## Deploy
+
+One click via [`render.yaml`](render.yaml) — create a new Blueprint and paste the
+repo URL. `CMC_API_KEY` is marked `sync: false`, so Render asks for it in the
+dashboard rather than reading it out of the repo.
+
+The issuer join is built once at startup in a background thread (~60 API calls,
+cached for 6 hours in memory and on disk), so a cold start never blocks a
+request past a host's timeout.
+
 ## Endpoint reference
 
 | Method | Path | Notes |
