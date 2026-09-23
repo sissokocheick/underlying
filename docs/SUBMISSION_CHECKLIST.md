@@ -13,12 +13,17 @@ this machine.
       3 issuers, with NVIDIA held through Backed / Ondo / Dinari
 - [x] `/api/capabilities` probes each endpoint; `market-pairs/list` honestly
       reports 403
-- [x] 18 unit tests pass over the roll-up logic, no network needed
+- [x] 22 unit tests pass over the roll-up logic, no network needed
+- [x] CSV import: paste a spreadsheet, get priced positions; unresolved rows
+      reported, not swallowed
+- [x] Wrapper comparison: same company, several issuers, ranked by exit
+      liquidity — the buying decision
+- [x] No native `prompt()` dialogs; inline forms throughout
 - [x] `README.md` names every endpoint, shows a verbatim API response, and
       states what the API made possible and where it got in the way
 - [x] No key in the repo (`.env` gitignored; `CMC_API_KEY` marked `sync: false`
       in `render.yaml` so Render prompts for it)
-- [x] Git repo initialised, 5 commits, clean tree
+- [x] Git repo initialised, 7 commits, clean tree
 
 ## Remaining — in order
 
@@ -60,22 +65,27 @@ Sanity-check the deployed demo:
 curl -s <demo-url>/api/health
 curl -s -X POST <demo-url>/api/evaluate -H 'Content-Type: application/json' \
   -d '{"demo":true}' | python -m json.tool | head -20
+curl -s -X POST <demo-url>/api/import -H 'Content-Type: application/json' \
+  -d '{"csv":"NVDAX,90,178.40"}' | head -5
 ```
 
-You should see 8 positions, 6 underlying, 3 issuers, and the
-`issuer_concentration` flag at 82%. If the first call is slow, that is the
-one-off universe build; it is cached to disk after.
+You should see 8 positions, 6 underlying, 3 issuers, the
+`issuer_concentration` flag at 82%, and a `wrapper_comparison` entry for
+Nvidia with three wrappers. If the first call is slow, that is the one-off
+universe build; it is cached to disk after.
 
 ### 3. Screen recording (required form field)
 
 60–90 seconds is enough. The arc that lands:
 
-1. Open the demo — headline reads 8 wrappers / 6 assets / 3 issuers
-2. Scroll to the roll-up: three NVIDIA tickers collapse to one company held
-   through three issuers
-3. The high flag: 82% of the tokenised book through one issuer
-4. Add a position via search to show it is live
-5. `/api/capabilities` showing the real endpoint probe, with the 403 on
+1. Open the demo — the funnel narrows 8 wrappers → 6 assets → 3 issuers
+2. Scroll to "Which wrapper do you buy?" — three NVIDIA wrappers ranked by
+   exit liquidity, Dinari's unpriced one last
+3. The roll-up: three tickers collapse to one company held through three issuers
+4. The high flag: 82% of the tokenised book through one issuer
+5. Import CSV → paste a line → priced instantly, showing you can bring a real
+   book in seconds
+6. `/api/capabilities` showing the real endpoint probe, with the 403 on
    `market-pairs/list` — that is the honest limitation
 
 OBS Studio is free on Windows. Upload unlisted to YouTube or to the GitHub
@@ -118,4 +128,5 @@ results 19 Oct.
 - The demo book on the live deploy shows **3 issuers** in both the headline and
   the issuer panel. If the panel shows 2 and the headline 3, the deploy is
   running stale code — redeploy.
-- `python -m unittest discover -s tests` prints `OK`.
+- `wrapper_comparison` contains one entry (Nvidia) with 3 wrappers.
+- `python -m unittest discover -s tests` prints `OK` (22 tests).
