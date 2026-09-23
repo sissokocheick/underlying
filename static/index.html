@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underlying — what your portfolio is really made of</title>
+<meta name="description" content="A portfolio tracker for crypto and tokenised TradFi. Shows the company and the issuer behind every token you hold.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="/">Underlying</a>
+    <nav>
+      <a href="#holdings">Holdings</a>
+      <a href="#rollup">The roll-up</a>
+      <a href="#allocation">Allocation</a>
+      <a href="#evidence">Evidence</a>
+    </nav>
+    <button id="demoBtn" class="ghost">Load demo book</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="hero">
+    <h1>You don't hold tokens.<br>You hold counterparties.</h1>
+    <p class="lede">
+      Every tokenised stock is a promise from an issuer, not a share in a vault.
+      Underlying prices your book against live CoinMarketCap data and rolls it up
+      past the ticker — to the <b>company</b> you're exposed to, and the <b>issuer</b>
+      you're exposed through.
+    </p>
+    <div id="headline" class="headline"></div>
+  </section>
+
+  <section id="flags" aria-live="polite"></section>
+
+  <section id="holdings">
+    <div class="sec-head">
+      <h2>Holdings</h2>
+      <div class="sec-actions">
+        <input id="searchBox" type="search" placeholder="Add: NVDA, BTC, NVDAX…" autocomplete="off">
+        <button id="addBtn" class="primary" disabled>Add</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="positions">
+        <thead><tr>
+          <th>Token</th><th class="r">Qty</th><th class="r">Cost</th>
+          <th class="r">Price</th><th class="r">Value</th><th class="r">P&amp;L</th>
+          <th>Issuer</th><th>Chain</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="emptyBook" class="muted hidden">No positions yet. Add one above, or load the demo book.</p>
+    </div>
+    <div id="searchResults" class="results"></div>
+  </section>
+
+  <section id="rollup">
+    <div class="sec-head"><h2>The roll-up</h2>
+      <p class="muted small">The same book, three layers deep. Start at the wrappers, end at who owes you.</p>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <h3>By underlying</h3>
+        <p class="muted small">The real asset. Multiple wrappers of the same company collapse into one row.</p>
+        <div id="byUnderlying"></div>
+      </div>
+      <div class="card">
+        <h3>By issuer</h3>
+        <p class="muted small">Your counterparty. If this issuer halts redemptions, everything below it re-prices.</p>
+        <div id="byIssuer"></div>
+      </div>
+      <div class="card">
+        <h3>By asset class</h3>
+        <p class="muted small">Stock, commodity, crypto — the only diversification the wrappers can't fake.</p>
+        <div id="byClass"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="allocation">
+    <div class="sec-head"><h2>Allocation</h2>
+      <p class="muted small">Outer ring: asset class. Inner ring: issuer. The gap between them is the whole point.</p>
+    </div>
+    <div class="alloc-grid">
+      <div class="card"><svg id="donutClass" viewBox="0 0 200 200"></svg><div id="legendClass"></div></div>
+      <div class="card"><svg id="donutIssuer" viewBox="0 0 200 200"></svg><div id="legendIssuer"></div></div>
+    </div>
+  </section>
+
+  <section id="evidence">
+    <div class="sec-head"><h2>Evidence</h2>
+      <p class="muted small">Every number above came from a live CoinMarketCap call. Here it is.</p>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <h3>Endpoints used</h3>
+        <p class="muted small">Probed live from this instance.</p>
+        <div id="endpointList"></div>
+      </div>
+      <div class="card">
+        <h3>Last raw response</h3>
+        <p class="muted small">Unedited JSON from the most recent pricing call.</p>
+        <pre id="rawResponse">—</pre>
+      </div>
+      <div class="card">
+        <h3>Where the API got in the way</h3>
+        <p class="small">
+          This plan has <b>no historical quotes</b> and <b>no market-pairs</b>, so
+          cost basis is entered by hand and liquidity is read off 24h volume
+          rather than from an order book. Read the full note in the README.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="muted small">
+      Built for <a href="https://dorahacks.io/hackathon/coinmarketcap-api-202609" target="_blank" rel="noopener">Build with CMC: API Hackathon</a>.
+      Data from the CoinMarketCap API. Positions are stored only in your browser.
+    </p>
+  </footer>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>
