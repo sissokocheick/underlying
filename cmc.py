@@ -259,6 +259,40 @@ class CMC:
 
     # -- search ------------------------------------------------------------
 
+    def resolve(self, symbol: str) -> dict | None:
+        """One symbol -> one token, for CSV import.
+
+        Prefers an exact symbol hit in the universe (so 'NVDA.D' lands on the
+        Dinari wrapper, not the native stock), and only then falls back to the
+        native crypto map. Returns the universe descriptor plus a match type, so
+        the caller can say which one it got.
+        """
+        q = (symbol or "").strip().upper()
+        if not q:
+            return None
+        u = self.universe()
+        exact = [t for t in u.values()
+                 if isinstance(t.get("crypto_id"), int)
+                 and isinstance(t.get("symbol"), str) and t["symbol"].upper() == q]
+        if exact:
+            return {**exact[0], "match": "rwa" if exact[0].get("rwa_id") else "wrapper"}
+        # Not a tokenised wrapper; try native crypto by symbol.
+        try:
+            payload = self._get("/v1/cryptocurrency/map", symbol=q, limit=1)
+            for m in payload.get("data", [])[:1]:
+                return {
+                    "crypto_id": m.get("id"),
+                    "symbol": m.get("symbol"),
+                    "name": m.get("name"),
+                    "issuer_id": None,
+                    "issuer_name": None,
+                    "rwa_id": None,
+                    "match": "crypto",
+                }
+        except CMCError:
+            return None
+        return None
+
     def search(self, query: str, limit: int = 25) -> list[dict]:
         """Find tokens and native crypto by symbol or name. Native crypto is
         resolved through /v2/quotes, RWA wrappers through the universe."""

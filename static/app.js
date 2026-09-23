@@ -39,6 +39,7 @@ function render(book) {
   renderHeadline(book.totals);
   renderFlags(book.flags);
   renderPositions(book.positions, book.totals);
+  renderComparison(book.wrapper_comparison || []);
   renderGroups($("#byUnderlying"), book.by_underlying, ["wrappers", "issuers"], true);
   renderGroups($("#byIssuer"), book.by_issuer, ["positions"], false);
   renderGroups($("#byClass"), book.by_class, ["positions"], false);
@@ -57,6 +58,23 @@ function renderHeadline(t) {
   ];
   $("#headline").innerHTML = rows
     .map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`)
+    .join("");
+
+  // The hero: the same book narrows as you look deeper. Drawn as a funnel so the
+  // three numbers read as one fact, not three unrelated stats.
+  const steps = [
+    [t.positions, "token wrappers", "what you bought"],
+    [t.n_underlying, "underlying assets", "what you're exposed to"],
+    [t.n_issuers, "issuers", "who you owe it to"],
+  ];
+  const max = steps[0][0] || 1;
+  $("#funnel").innerHTML = steps
+    .map(
+      ([n, label, why], i) => `<div class="fstep" style="--w:${Math.max((n / max) * 100, 8)}%;--d:${i * 90}ms">
+        <div class="fbar"><span class="fn">${n}</span><span class="fl">${label}</span></div>
+        <div class="fw">${why}</div>
+      </div>`
+    )
     .join("");
 }
 
@@ -118,6 +136,31 @@ function renderGroups(el, groups, subs, showIssuers) {
         <div class="pc">${pct(g.share)}</div>
       </div><div class="sub">${sub}</div>`;
     })
+    .join("");
+}
+
+function renderComparison(groups) {
+  const el = $("#compare");
+  // Only worth showing when the book actually holds something two ways.
+  if (!groups.length) { el.innerHTML = `<p class="muted small">Hold the same company through more than one wrapper and this ranks them.</p>`; return; }
+  el.innerHTML = groups
+    .map(
+      (g) => `<div class="cmp">
+        <div class="cmp-h"><b>${esc(g.name)}</b><span class="muted small">${g.wrappers.length} wrappers, one underlying</span></div>
+        ${g.wrappers
+          .map(
+            (w, i) => `<div class="cmp-row ${i === 0 ? "best" : ""} ${w.priced ? "" : "unpriced"}">
+              ${i === 0 ? `<span class="tag">deepest market</span>` : ""}
+              <b>${esc(w.symbol)}</b>
+              <span class="pill">${esc(w.issuer_name || "—")}</span>
+              <span class="muted small">${esc(w.chain || "—")}</span>
+              <span class="r num">${w.priced ? usd(w.price) : "no market"}</span>
+              <span class="r num muted">${w.volume_24h ? usd(w.volume_24h, 0) + " 24h vol" : ""}</span>
+            </div>`
+          )
+          .join("")}
+      </div>`
+    )
     .join("");
 }
 
@@ -211,21 +254,47 @@ box.addEventListener("input", async () => {
 });
 
 function qtyAndCost(t) {
-  // Cost basis is required because this plan has no historical quotes endpoint.
-  const qty = prompt(`Quantity of ${t.symbol}?`, "1");
-  if (qty === null) return;
-  const cost = prompt(`Average USD paid per ${t.symbol}? (This plan has no price history, so this is entered by hand.)`, "");
-  if (cost === null) return;
-  positions.push({
-    id: Date.now(),
-    crypto_id: t.crypto_id,
-    quantity: parseFloat(qty) || 0,
-    cost_basis: parseFloat(cost) || null,
+  // Inline form, not prompt(): native dialogs read as a prototype, and this plan
+  // has no historical quotes endpoint, so cost basis has to be entered by hand
+  // -- worth telling the user in the form itself rather than in a dialog title.
+  const holder = $("#addPanel");
+  holder.innerHTML = `<div class="add-panel" id="ap">
+    <div class="add-token"><b>${esc(t.symbol)}</b><span class="muted small">${esc(t.name || "")}</span>
+      ${t.issuer_name ? `<span class="pill">${esc(t.issuer_name)}</span>` : ""}</div>
+    <label>Quantity<input id="apQty" type="number" min="0" step="any" value="1"></label>
+    <label>Avg USD paid<input id="apCost" type="number" min="0" step="any" placeholder="optional"></label>
+    <button id="apSave" class="primary">Add position</button>
+    <button id="apCancel" class="ghost">Cancel</button>
+  </div>`;
+  holder.classList.remove("hidden");
+  const qtyEl = $("#apQty");
+  qtyEl.focus();
+  qtyEl.select();
+
+  const close = () => {
+    holder.innerHTML = "";
+    holder.classList.add("hidden");
+    box.value = "";
+    addBtn.disabled = true;
+  };
+
+  $("#apCancel").addEventListener("click", close);
+  $("#apSave").addEventListener("click", () => {
+    const qty = parseFloat($("#apQty").value);
+    const costRaw = $("#apCost").value.trim();
+    const cost = costRaw === "" ? null : parseFloat(costRaw);
+    if (!(qty > 0)) { qtyEl.focus(); qtyEl.classList.add("bad-input"); return; }
+    if (positions.length > 0) {
+      positions.push({ id: Date.now(), crypto_id: t.crypto_id, quantity: qty, cost_basis: cost });
+    } else {
+      // Adding to an empty book replaces the demo; the visitor now owns the page.
+      demoPositions = demoPositions.concat([{ id: Date.now(), crypto_id: t.crypto_id, quantity: qty, cost_basis: cost }]);
+    }
+    save();
+    close();
+    refresh();
   });
-  save();
-  box.value = "";
-  addBtn.disabled = true;
-  refresh();
+  holder.onkeydown = (e) => { if (e.key === "Escape") close(); };
 }
 
 addBtn.addEventListener("click", () => { if (pending) qtyAndCost(pending); });
@@ -240,6 +309,77 @@ $("#demoBtn").addEventListener("click", () => {
   demoPositions = [];
   refresh();
   document.getElementById("holdings").scrollIntoView({ behavior: "smooth" });
+});
+
+/* ---------- CSV import ---------- */
+
+// Nobody re-types a 40-line book by hand, but everybody has it in a spreadsheet.
+// Sample text is pre-filled so the dialogue teaches the format instead of
+// demanding a blank form be understood by guessing.
+$("#importBtn").addEventListener("click", () => {
+  const holder = $("#addPanel");
+  holder.innerHTML = `<div class="add-panel" id="imp">
+    <div class="add-token"><b>Paste positions</b><span class="muted small">SYMBOL,QUANTITY,AVG_COST — one per line. Header optional.</span></div>
+    <textarea id="impText" rows="6" spellcheck="false">NVDAX,90,178.40
+NVDAon,40,181.10
+NVDA.D,30,175
+COINX,45,210
+BTC,0.18,64100</textarea>
+    <button id="impGo" class="primary">Price these</button>
+    <button id="impCancel" class="ghost">Cancel</button>
+    <div id="impNote" class="small muted"></div>
+  </div>`;
+  holder.classList.remove("hidden");
+  $("#impText").focus();
+
+  $("#impCancel").addEventListener("click", () => {
+    holder.innerHTML = "";
+    holder.classList.add("hidden");
+  });
+
+  $("#impGo").addEventListener("click", async () => {
+    const btn = $("#impGo");
+    const csv = $("#impText").value;
+    btn.disabled = true;
+    btn.textContent = "Resolving…";
+    try {
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csv }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "import failed");
+      const got = data.positions || [];
+      if (positions.length > 0) {
+        positions = positions.concat(got);
+      } else {
+        demoPositions = demoPositions.concat(got);
+      }
+      save();
+      const n = got.length;
+      const bad = data.unresolved || [];
+      $("#impNote").innerHTML =
+        (n ? `<span class="up">Added ${n} position${n > 1 ? "s" : ""}.</span> ` : "") +
+        (bad.length
+          ? `<span class="down">Could not resolve ${bad.length}: ${esc(bad.map(b => b.symbol).join(", "))}.</span>`
+          : "");
+      if (n) {
+        setTimeout(() => {
+          holder.innerHTML = "";
+          holder.classList.add("hidden");
+          refresh();
+        }, bad.length ? 4500 : 700);
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Price these";
+      }
+    } catch (e) {
+      $("#impNote").innerHTML = `<span class="down">${esc(e.message)}</span>`;
+      btn.disabled = false;
+      btn.textContent = "Price these";
+    }
+  });
 });
 
 /* ---------- evidence panel ---------- */

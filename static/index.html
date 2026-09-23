@@ -32,6 +32,7 @@
       you're exposed through.
     </p>
     <div id="headline" class="headline"></div>
+    <div id="funnel" class="funnel" aria-hidden="true"></div>
   </section>
 
   <section id="flags" aria-live="polite"></section>
@@ -42,6 +43,7 @@
       <div class="sec-actions">
         <input id="searchBox" type="search" placeholder="Add: NVDA, BTC, NVDAX…" autocomplete="off">
         <button id="addBtn" class="primary" disabled>Add</button>
+        <button id="importBtn" class="ghost">Import CSV</button>
       </div>
     </div>
     <div class="tablewrap">
@@ -56,6 +58,7 @@
       <p id="emptyBook" class="muted hidden">No positions yet. Add one above, or load the demo book.</p>
     </div>
     <div id="searchResults" class="results"></div>
+    <div id="addPanel" class="hidden"></div>
   </section>
 
   <section id="rollup">
@@ -79,6 +82,13 @@
         <div id="byClass"></div>
       </div>
     </div>
+  </section>
+
+  <section id="compareSec">
+    <div class="sec-head"><h2>Which wrapper do you buy?</h2>
+      <p class="muted small">Same company, different issuers. Ranked by exit liquidity, because the ticker you saw first is not the one to own.</p>
+    </div>
+    <div id="compare" class="grid3"></div>
   </section>
 
   <section id="allocation">

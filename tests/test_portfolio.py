@@ -10,7 +10,7 @@ several issuers, and that native crypto is never mistaken for an issuer.
 
 import unittest
 
-from portfolio import _flags, by_class, by_issuer, by_underlying, totals
+from portfolio import _flags, by_class, by_issuer, by_underlying, compare_wrappers, totals
 
 
 def row(id, crypto_id, value=None, cost=None, rwa_id=None, issuer_id=None,
@@ -107,6 +107,34 @@ class TestByUnderlying(unittest.TestCase):
         btc = next(g for g in by_underlying(BOOK) if g["key"] == "c1")
         self.assertEqual(btc["n_wrappers"], 1)
         self.assertEqual(btc["issuers"], [])
+
+
+class TestCompareWrappers(unittest.TestCase):
+    """The buying decision: which of several wrappers of one company to own."""
+
+    def test_only_appears_when_held_two_ways(self):
+        # Drop both extra NVIDIA wrappers: one wrapper of NVIDIA and one of
+        # Coinbase is nothing to compare.
+        single = [r for r in BOOK if r["id"] not in (2, 3)]
+        self.assertEqual(compare_wrappers(single), [])
+
+    def test_ranks_deepest_market_first(self):
+        groups = compare_wrappers(BOOK)
+        self.assertEqual(len(groups), 1)
+        wrappers = groups[0]["wrappers"]
+        self.assertEqual([w["symbol"] for w in wrappers],
+                         ["T36992", "T38093", "T28616"])
+
+    def test_unpriced_sorts_last_not_omitted(self):
+        wrappers = compare_wrappers(BOOK)[0]["wrappers"]
+        self.assertEqual(wrappers[-1]["priced"], False)
+        # Every wrapper is reported, so the unquotable one stays visible.
+        self.assertEqual(len(wrappers), 3)
+
+    def test_native_crypto_excluded(self):
+        # BTC and ETH have no rwa_id, so they never appear here.
+        for g in compare_wrappers(BOOK):
+            self.assertIsNotNone(g["rwa_id"])
 
 
 class TestByClass(unittest.TestCase):

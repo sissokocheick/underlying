@@ -108,7 +108,58 @@ def evaluate(cmc, positions: list[dict]) -> dict:
         "by_underlying": by_underlying(rows),
         "by_class": by_class(rows),
         "flags": _flags(rows, roll, issuers),
+        # The buying decision: given you want exposure to this company, which
+        # wrapper do you buy? Same underlying, different issuers, different
+        # liquidity -- ranked so the answer isn't "whichever ticker I saw first".
+        "wrapper_comparison": compare_wrappers(rows),
     }
+
+
+def compare_wrappers(rows):
+    """For each underlying held more than one way, rank the wrappers.
+
+    A wrapper is scored on the two things that actually bite at exit: can you
+    price it, and is the market deep enough to leave. Unpriced wrappers sort
+    last -- an unquotable claim is not an alternative, it's a warning.
+    """
+    groups = defaultdict(list)
+    for r in rows:
+        if r["rwa_id"] is None:
+            continue
+        groups[r["rwa_id"]].append(r)
+
+    out = []
+    for rwa_id, group in groups.items():
+        if len(group) < 2:
+            continue
+        ranked = sorted(
+            group,
+            key=lambda r: (
+                r["value"] is None,                      # unpriced sorts last
+                -(r["volume_24h"] or 0),                  # then deepest market first
+            ),
+        )
+        out.append(
+            {
+                "rwa_id": rwa_id,
+                "name": (group[0].get("company") or {}).get("name")
+                        or group[0].get("asset_name")
+                        or group[0].get("symbol"),
+                "wrappers": [
+                    {
+                        "symbol": w.get("symbol"),
+                        "issuer_name": w.get("issuer_name"),
+                        "price": w.get("price"),
+                        "value": w.get("value"),
+                        "volume_24h": w.get("volume_24h"),
+                        "chain": w.get("chain"),
+                        "priced": w.get("value") is not None,
+                    }
+                    for w in ranked
+                ],
+            }
+        )
+    return out
 
 
 def totals(rows):

@@ -124,6 +124,8 @@ That `cik` is a real SEC Central Index Key, and it is what lets the roll-up say
   and the RWA family exposes that relationship directly. That is the entire basis
   for the counterparty roll-up — it cannot be built from the crypto-only
   endpoints.
+- **`volume_24h` on quotes** is what makes the wrapper comparison rank by exit
+  liquidity rather than by ticker order.
 - **`asset_type` on the map endpoint** drives the allocation donut without any
   hand-maintained classifier.
 - **SEC CIK and industry on `info`** turn a ticker into a named company with a
@@ -152,6 +154,37 @@ Stated plainly, because it shaped the design:
   429s.
 
 ---
+
+## Three decisions the app helps you make
+
+A screener shows you the market. This shows you *your* book, and what to do
+about it.
+
+### Should I buy this wrapper, or another one?
+
+The same company is often tokenised by several issuers. **Which wrapper do you
+buy?** ranks them by exit liquidity, because the ticker you saw first is not the
+one to own:
+
+```
+Nvidia Corp — 3 wrappers, one underlying
+  [deepest market]  NVDAX   Backed Assets   $212.41   $27,488,738 24h vol
+                    NVDAon  Ondo Assets     $212.38   $ 2,310,617 24h vol
+                    NVDA.D  Dinari Assets   no market
+```
+
+Unpriced wrappers sort last rather than vanishing — an unquotable claim is not
+an alternative, it's a warning.
+
+### Can I actually get out?
+
+The `illiquid` flag fires below $1k of 24h volume. Volume is the available
+proxy, because the order-book endpoint is 403 on this plan (see below).
+
+### Am I concentrated in a way the tickers hide?
+
+Three NVIDIA tickers look like three holdings and are one position. The roll-up
+says so, and names the issuers.
 
 ## The insight, end to end
 
@@ -202,10 +235,10 @@ Four files, no build step, one dependency.
 
 ```
 cmc.py         the API client: transport, TTL cache (memory + disk), the join
-portfolio.py   positions -> book; the three roll-ups and the risk flags
+portfolio.py   positions -> book; roll-ups, risk flags, wrapper comparison
 app.py         Flask: /api/* and the static front end
 static/        one HTML page, hand-rolled SVG donuts, localStorage
-tests/         18 tests over the roll-up functions, no network needed
+tests/         22 tests over the roll-up functions, no network needed
 ```
 
 - **stdlib only** for the client (`urllib`, `threading`, `json`). The single
@@ -235,13 +268,14 @@ The roll-up functions are pure — rows in, dicts out — so the logic that prod
 the numbers above is verified without a network call or a key:
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py" -v    # 18 tests
+python -m unittest discover -s tests -p "test_*.py" -v    # 22 tests
 ```
 
 Each test asserts one specific claim the app makes: three wrappers collapse to
 one underlying through three issuers, native crypto is never counted as an
-issuer, issuer shares sum over the tokenised book only, and the concentration
-flag's warn/high thresholds sit at 25% / 50%.
+issuer, issuer shares sum over the tokenised book only, wrapper comparison
+ranks the deepest market first with the unpriced one last, and the
+concentration flag's warn/high thresholds sit at 25% / 50%.
 
 ## Deploy
 
@@ -262,11 +296,31 @@ request past a host's timeout.
 | `GET` | `/api/issuers` | all issuers, most tokens first |
 | `GET` | `/api/search?q=` | native crypto + tokenised wrappers |
 | `POST` | `/api/evaluate` | the whole roll-up; `{"positions": [...]}` or `{"demo": true}` |
+| `POST` | `/api/import` | pasted CSV → priced positions; `{"csv": "NVDAX,90,178.40\n…"}` |
 | `GET` | `/api/demo` | the demo book above |
 | `GET` | `/api/asset/<rwa_id>` | underlying company metadata |
 
 A position is `{id, crypto_id, quantity, cost_basis}` — `cost_basis` is average
 USD paid per unit, entered by hand because there is no price-history endpoint.
+
+### CSV import
+
+Nobody re-types a 40-line book by hand, but everybody has it in a spreadsheet:
+
+```bash
+curl -X POST localhost:5000/api/import \
+  -H 'Content-Type: application/json' \
+  -d '{"csv": "NVDAX,90,178.40\nNVDAon,40,181.10\nBTC,0.18,64100"}'
+```
+
+Symbols resolve to tokenised wrappers first (so `NVDA.D` lands on the Dinari
+wrapper, not the native stock) and fall back to native crypto. Rows that won't
+resolve are returned, not swallowed:
+
+```json
+{ "positions": [...],
+  "unresolved": [{ "line": 7, "symbol": "FAKECOIN", "reason": "no match" }] }
+```
 
 ---
 

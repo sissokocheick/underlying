@@ -139,6 +139,55 @@ def create_app() -> Flask:
         except CMCError as exc:
             return jsonify({"error": str(exc)}), 502
 
+    @app.post("/api/import")
+    def import_csv():
+        """Turn a pasted CSV of SYMBOL,QUANTITY,COST into priced positions.
+
+        The point is adoption: nobody re-types a 40-line book by hand, but
+        everybody has it in a spreadsheet. Unresolved symbols are reported back
+        rather than dropped silently, so the caller can fix the row.
+        """
+        if cmc is None:
+            return jsonify({"error": "CMC_API_KEY not configured"}), 503
+        body = request.get_json(silent=True) or {}
+        text = (body.get("csv") or "").strip()
+        if not text:
+            return jsonify({"error": "no CSV provided"}), 400
+
+        positions, unresolved = [], []
+        for i, line in enumerate(text.splitlines(), start=1):
+            cells = [c.strip() for c in line.split(",")]
+            if not cells or not cells[0] or cells[0].upper().startswith("SYMBOL"):
+                continue  # skip a header row
+            symbol, qty = cells[0], cells[1] if len(cells) > 1 else "0"
+            cost = cells[2] if len(cells) > 2 else ""
+            try:
+                tok = cmc.resolve(symbol)
+            except CMCError as exc:
+                unresolved.append({"line": i, "symbol": symbol, "reason": str(exc)})
+                continue
+            if tok is None:
+                unresolved.append({"line": i, "symbol": symbol, "reason": "no match"})
+                continue
+            try:
+                quantity = float(qty)
+            except ValueError:
+                unresolved.append({"line": i, "symbol": symbol, "reason": f"bad quantity: {qty}"})
+                continue
+            try:
+                cost_each = float(cost) if cost else None
+            except ValueError:
+                cost_each = None
+            positions.append(
+                {
+                    "id": f"imp{i}",
+                    "crypto_id": tok["crypto_id"],
+                    "quantity": quantity,
+                    "cost_basis": cost_each,
+                }
+            )
+        return jsonify({"positions": positions, "unresolved": unresolved})
+
     @app.get("/api/asset/<int:rwa_id>")
     def asset(rwa_id):
         if cmc is None:
