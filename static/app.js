@@ -14,7 +14,16 @@ const num = (n, d = 4) => (n == null || isNaN(n) ? "—" : n.toLocaleString("en-
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 let positions = load();
+// The demo book is shown when the visitor has nothing stored. Deleting from it
+// must work, so the rows being displayed are tracked separately from the saved
+// book and sent back on the next evaluate.
+let demoPositions = [];
 let lastRaw = null;
+
+/* The rows currently on screen: the saved book, or the demo when it is empty. */
+function shown() {
+  return positions.length > 0 ? positions : demoPositions;
+}
 
 function load() {
   try {
@@ -35,7 +44,7 @@ function render(book) {
   renderGroups($("#byClass"), book.by_class, ["positions"], false);
   donut($("#donutClass"), $("#legendClass"), book.by_class, "name");
   donut($("#donutIssuer"), $("#legendIssuer"), book.by_issuer, "name");
-  $("#emptyBook").classList.toggle("hidden", positions.length > 0);
+  $("#emptyBook").classList.toggle("hidden", shown().length > 0);
 }
 
 function renderHeadline(t) {
@@ -82,7 +91,13 @@ function renderPositions(rows, totals) {
     .join("");
   tb.querySelectorAll("button.del").forEach((b) =>
     b.addEventListener("click", () => {
-      positions = positions.filter((p) => String(p.id) !== b.dataset.id);
+      // Delete from whichever set is on screen -- otherwise a click in the demo
+      // book filters an empty list and nothing happens.
+      if (positions.length > 0) {
+        positions = positions.filter((p) => String(p.id) !== b.dataset.id);
+      } else {
+        demoPositions = demoPositions.filter((p) => String(p.id) !== b.dataset.id);
+      }
       save(); refresh();
     })
   );
@@ -133,7 +148,10 @@ function donut(svg, legend, groups, labelKey) {
 /* ---------- data ---------- */
 
 async function refresh() {
-  const body = { positions, demo: positions.length === 0 };
+  const isDemo = positions.length === 0;
+  // On first load with an empty book, ask the server for its demo; after that
+  // send what we have so deletions stick.
+  const body = { positions: shown(), demo: isDemo && demoPositions.length === 0 };
   try {
     const res = await fetch("/api/evaluate", {
       method: "POST",
@@ -143,6 +161,7 @@ async function refresh() {
     const book = await res.json();
     if (!res.ok) throw new Error(book.error || "pricing failed");
     lastRaw = book;
+    if (isDemo && demoPositions.length === 0) demoPositions = book.positions;
     render(book);
     $("#rawResponse").textContent = JSON.stringify(book.positions?.slice(0, 3), null, 1);
   } catch (e) {
@@ -218,6 +237,7 @@ document.addEventListener("click", (e) => {
 $("#demoBtn").addEventListener("click", () => {
   localStorage.removeItem(STORE_KEY);
   positions = [];
+  demoPositions = [];
   refresh();
   document.getElementById("holdings").scrollIntoView({ behavior: "smooth" });
 });

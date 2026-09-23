@@ -136,13 +136,18 @@ def totals(rows):
 
 def by_issuer(rows):
     """Counterparty concentration. Native crypto is excluded outright -- it has
-    no issuer, and including it would invent a fake 'unattributed' issuer."""
+    no issuer, and including it would invent a fake 'unattributed' issuer.
+
+    Unpriced wrappers are kept, contributing no value but still counting as a
+    position: an issuer holding a claim you cannot price is a counterparty you
+    want on the list, not one to hide. Shares stay over priced value only.
+    """
     groups = defaultdict(lambda: {"value": 0.0, "cost": 0.0, "ids": []})
     for r in rows:
-        if r["value"] is None or r["rwa_id"] is None or not r["issuer_id"]:
+        if r["rwa_id"] is None or not r["issuer_id"]:
             continue
         g = groups[r["issuer_id"]]
-        g["value"] += r["value"]
+        g["value"] += r["value"] or 0.0
         g["cost"] += r["cost"] or 0.0
         g["name"] = r["issuer_name"]
         g["ids"].append(r["id"])
