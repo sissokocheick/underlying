@@ -101,6 +101,24 @@ def evaluate(cmc, positions: list[dict]) -> dict:
     # would shadow the function and UnboundLocalError on the very call.
     roll = totals(rows)
     issuers = by_issuer(rows)
+
+    # Institutional Counterparty Concentration (Herfindahl-Hirschman Index / HHI)
+    hhi = round(sum((iss["share"] * 100) ** 2 for iss in issuers), 1) if issuers else 0.0
+    hhi_level = "critical" if hhi >= 2500 else ("moderate" if hhi >= 1500 else "diversified")
+    stress_test = None
+    if issuers:
+        largest = issuers[0]
+        stress_test = {
+            "issuer_id": largest["issuer_id"],
+            "name": largest["name"],
+            "capital_at_risk": largest["value"],
+            "capital_share": largest["share"],
+            "scenario": f"If {largest['name']} halts redemptions, ${largest['value']:,.0f} ({largest['share']:.1%}) of your tokenised portfolio is immediately frozen."
+        }
+    roll["counterparty_hhi"] = hhi
+    roll["hhi_level"] = hhi_level
+    roll["stress_test"] = stress_test
+
     return {
         "positions": rows,
         "totals": roll,
@@ -139,24 +157,42 @@ def compare_wrappers(rows):
                 -(r["volume_24h"] or 0),                  # then deepest market first
             ),
         )
+        deepest = ranked[0]
+        deepest_price = deepest.get("price")
+        deepest_vol = deepest.get("volume_24h") or 0.0
+
+        wrappers_out = []
+        for i, w in enumerate(ranked):
+            p = w.get("price")
+            vol = w.get("volume_24h") or 0.0
+            spread_bps = None
+            if i > 0 and p and deepest_price and deepest_price > 0:
+                spread_bps = round(((p - deepest_price) / deepest_price) * 10000, 1)
+            liquidity_ratio = None
+            if i > 0 and deepest_vol and vol and vol > 0:
+                liquidity_ratio = round(deepest_vol / vol, 1)
+
+            wrappers_out.append(
+                {
+                    "symbol": w.get("symbol"),
+                    "issuer_name": w.get("issuer_name"),
+                    "price": p,
+                    "value": w.get("value"),
+                    "volume_24h": w.get("volume_24h"),
+                    "chain": w.get("chain"),
+                    "priced": w.get("value") is not None,
+                    "spread_bps": spread_bps,
+                    "liquidity_ratio": liquidity_ratio,
+                }
+            )
+
         out.append(
             {
                 "rwa_id": rwa_id,
                 "name": (group[0].get("company") or {}).get("name")
                         or group[0].get("asset_name")
                         or group[0].get("symbol"),
-                "wrappers": [
-                    {
-                        "symbol": w.get("symbol"),
-                        "issuer_name": w.get("issuer_name"),
-                        "price": w.get("price"),
-                        "value": w.get("value"),
-                        "volume_24h": w.get("volume_24h"),
-                        "chain": w.get("chain"),
-                        "priced": w.get("value") is not None,
-                    }
-                    for w in ranked
-                ],
+                "wrappers": wrappers_out,
             }
         )
     return out
@@ -266,6 +302,8 @@ def by_underlying(rows):
     for key, g in sorted(groups.items(), key=lambda kv: -kv[1]["value"]):
         company = g.get("company") or {}
         first = g["positions"][0]
+        cik = company.get("cik")
+        edgar_url = f"https://www.sec.gov/edgar/browse/?CIK={str(cik).zfill(10)}" if cik else None
         out.append(
             {
                 "key": key,
@@ -275,7 +313,8 @@ def by_underlying(rows):
                 "asset_type": g.get("asset_type"),
                 "industry": company.get("industry"),
                 "website": company.get("website"),
-                "cik": company.get("cik"),
+                "cik": cik,
+                "edgar_url": edgar_url,
                 "value": g["value"] or None,
                 "cost": g["cost"] or None,
                 "pnl": (g["value"] - g["cost"]) if (g["value"] and g["cost"]) else None,

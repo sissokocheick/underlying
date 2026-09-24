@@ -4,33 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Underlying — what your portfolio is really made of</title>
-<meta name="description" content="A portfolio tracker for crypto and tokenised TradFi. Shows the company and the issuer behind every token you hold.">
+<meta name="description" content="An institutional portfolio tracker for crypto and tokenised TradFi built on the CoinMarketCap API. Shows the company and issuer behind every token you hold.">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header>
   <div class="wrap">
-    <a class="brand" href="/">Underlying</a>
+    <a class="brand" href="/">Underlying <span class="badge-rwa">RWA Intelligence</span></a>
     <nav>
       <a href="#holdings">Holdings</a>
       <a href="#rollup">The roll-up</a>
+      <a href="#compareSec">Wrapper Choice</a>
       <a href="#allocation">Allocation</a>
-      <a href="#evidence">Evidence</a>
+      <a href="#evidence">CMC Evidence</a>
     </nav>
-    <button id="demoBtn" class="ghost">Load demo book</button>
+    <div class="hdr-actions">
+      <button id="scanBtn" class="ghost">🔍 Scan EVM Wallet</button>
+      <button id="demoBtn" class="ghost">Load demo book</button>
+      <button id="shareBtn" class="ghost" title="Copy shareable link">🔗 Share</button>
+    </div>
   </div>
 </header>
 
 <main class="wrap">
 
   <section id="hero">
-    <h1>You don't hold tokens.<br>You hold counterparties.</h1>
-    <p class="lede">
-      Every tokenised stock is a promise from an issuer, not a share in a vault.
-      Underlying prices your book against live CoinMarketCap data and rolls it up
-      past the ticker — to the <b>company</b> you're exposed to, and the <b>issuer</b>
-      you're exposed through.
-    </p>
+    <div class="hero-top">
+      <div>
+        <h1>You don't hold tokens.<br>You hold counterparties.</h1>
+        <p class="lede">
+          Every tokenised stock is a claim on an issuer, not a share in a vault.
+          Underlying prices your book against live CoinMarketCap data and rolls it up
+          past the ticker — to the <b>underlying company</b> (verified by SEC CIK) and the <b>issuer</b>
+          who holds your collateral.
+        </p>
+      </div>
+      <div id="riskRadar" class="risk-radar hidden"></div>
+    </div>
     <div id="headline" class="headline"></div>
     <div id="funnel" class="funnel" aria-hidden="true"></div>
   </section>
@@ -39,11 +49,15 @@
 
   <section id="holdings">
     <div class="sec-head">
-      <h2>Holdings</h2>
+      <div>
+        <h2>Holdings</h2>
+        <p class="muted small">Client-side only (localStorage). Enter tokens, paste spreadsheet rows, or scan on-chain wallets.</p>
+      </div>
       <div class="sec-actions">
-        <input id="searchBox" type="search" placeholder="Add: NVDA, BTC, NVDAX…" autocomplete="off">
+        <input id="searchBox" type="search" placeholder="Add: NVDA, BTC, NVDAX, OUSG…" autocomplete="off">
         <button id="addBtn" class="primary" disabled>Add</button>
         <button id="importBtn" class="ghost">Import CSV</button>
+        <button id="exportBtn" class="ghost" title="Export portfolio to CSV">Export CSV</button>
       </div>
     </div>
     <div class="tablewrap">
@@ -51,49 +65,58 @@
         <thead><tr>
           <th>Token</th><th class="r">Qty</th><th class="r">Cost</th>
           <th class="r">Price</th><th class="r">Value</th><th class="r">P&amp;L</th>
-          <th>Issuer</th><th>Chain</th><th></th>
+          <th>Issuer / Counterparty</th><th>Underlying / SEC</th><th>Chain</th><th></th>
         </tr></thead>
         <tbody></tbody>
       </table>
-      <p id="emptyBook" class="muted hidden">No positions yet. Add one above, or load the demo book.</p>
+      <p id="emptyBook" class="muted hidden">No positions yet. Add one above, import CSV, or load the demo book.</p>
     </div>
     <div id="searchResults" class="results"></div>
     <div id="addPanel" class="hidden"></div>
   </section>
 
   <section id="rollup">
-    <div class="sec-head"><h2>The roll-up</h2>
-      <p class="muted small">The same book, three layers deep. Start at the wrappers, end at who owes you.</p>
+    <div class="sec-head">
+      <div>
+        <h2>The roll-up</h2>
+        <p class="muted small">The same book, three layers deep. Start at the wrappers, end at who owes you.</p>
+      </div>
     </div>
     <div class="grid3">
       <div class="card">
-        <h3>By underlying</h3>
+        <h3>By underlying company</h3>
         <p class="muted small">The real asset. Multiple wrappers of the same company collapse into one row.</p>
         <div id="byUnderlying"></div>
       </div>
       <div class="card">
-        <h3>By issuer</h3>
-        <p class="muted small">Your counterparty. If this issuer halts redemptions, everything below it re-prices.</p>
+        <h3>By counterparty issuer</h3>
+        <p class="muted small">Your issuer risk. If this counterparty halts redemptions, everything below it re-prices.</p>
         <div id="byIssuer"></div>
       </div>
       <div class="card">
         <h3>By asset class</h3>
-        <p class="muted small">Stock, commodity, crypto — the only diversification the wrappers can't fake.</p>
+        <p class="muted small">Stock, commodity, treasury, crypto — diversification that wrappers cannot fake.</p>
         <div id="byClass"></div>
       </div>
     </div>
   </section>
 
   <section id="compareSec">
-    <div class="sec-head"><h2>Which wrapper do you buy?</h2>
-      <p class="muted small">Same company, different issuers. Ranked by exit liquidity, because the ticker you saw first is not the one to own.</p>
+    <div class="sec-head">
+      <div>
+        <h2>Which wrapper do you buy?</h2>
+        <p class="muted small">Same company, different issuers. Ranked by exit liquidity and basis spread, because the ticker you saw first is not the one to own.</p>
+      </div>
     </div>
     <div id="compare" class="grid3"></div>
   </section>
 
   <section id="allocation">
-    <div class="sec-head"><h2>Allocation</h2>
-      <p class="muted small">Outer ring: asset class. Inner ring: issuer. The gap between them is the whole point.</p>
+    <div class="sec-head">
+      <div>
+        <h2>Allocation</h2>
+        <p class="muted small">Outer ring: asset class. Inner ring: counterparty issuer. The gap between them is the whole point.</p>
+      </div>
     </div>
     <div class="alloc-grid">
       <div class="card"><svg id="donutClass" viewBox="0 0 200 200"></svg><div id="legendClass"></div></div>
@@ -102,38 +125,41 @@
   </section>
 
   <section id="evidence">
-    <div class="sec-head"><h2>Evidence</h2>
-      <p class="muted small">Every number above came from a live CoinMarketCap call. Here it is.</p>
+    <div class="sec-head">
+      <div>
+        <h2>CoinMarketCap API Evidence & Architecture</h2>
+        <p class="muted small">Every number above is powered by CMC API endpoints. Probe live capabilities or inspect sample responses below.</p>
+      </div>
     </div>
     <div class="grid3">
       <div class="card">
-        <h3>Endpoints used</h3>
-        <p class="muted small">Probed live from this instance.</p>
-        <div id="endpointList"></div>
+        <h3>Endpoints probed live</h3>
+        <p class="muted small">Probed from this running instance via <code>/api/capabilities</code>.</p>
+        <ul id="endpointList" class="tight"></ul>
       </div>
-      <div class="card">
-        <h3>Last raw response</h3>
-        <p class="muted small">Unedited JSON from the most recent pricing call.</p>
-        <pre id="rawResponse">—</pre>
-      </div>
-      <div class="card">
-        <h3>Where the API got in the way</h3>
-        <p class="small">
-          This plan has <b>no historical quotes</b> and <b>no market-pairs</b>, so
-          cost basis is entered by hand and liquidity is read off 24h volume
-          rather than from an order book. Read the full note in the README.
-        </p>
+      <div class="card span2">
+        <div class="api-console-head">
+          <h3>Interactive Endpoint Explorer</h3>
+          <div id="apiTabs" class="api-tabs"></div>
+        </div>
+        <p id="apiEndpointPurpose" class="muted small"></p>
+        <div class="code-box">
+          <div class="code-url"><span class="meth">GET</span> <span id="apiEndpointPath"></span></div>
+          <pre id="apiEndpointPayload">—</pre>
+        </div>
       </div>
     </div>
   </section>
 
   <footer>
     <p class="muted small">
-      Built for <a href="https://dorahacks.io/hackathon/coinmarketcap-api-202609" target="_blank" rel="noopener">Build with CMC: API Hackathon</a>.
-      Data from the CoinMarketCap API. Positions are stored only in your browser.
+      Built for <a href="https://dorahacks.io/hackathon/coinmarketcap-api-202609" target="_blank" rel="noopener">Build with CMC: API Hackathon</a> (Track: Real World Assets).
+      Powered by CoinMarketCap RWA &amp; Quotes endpoints. Positions are held client-side only in <code>localStorage</code>.
     </p>
   </footer>
 </main>
+
+<div id="toast" class="toast hidden"></div>
 
 <script src="/app.js"></script>
 </body>

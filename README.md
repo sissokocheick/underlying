@@ -268,14 +268,15 @@ The roll-up functions are pure — rows in, dicts out — so the logic that prod
 the numbers above is verified without a network call or a key:
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py" -v    # 22 tests
+python -m unittest discover -s tests -p "test_*.py" -v    # 24 tests
 ```
 
 Each test asserts one specific claim the app makes: three wrappers collapse to
 one underlying through three issuers, native crypto is never counted as an
 issuer, issuer shares sum over the tokenised book only, wrapper comparison
-ranks the deepest market first with the unpriced one last, and the
-concentration flag's warn/high thresholds sit at 25% / 50%.
+ranks the deepest market first with the unpriced one last, spread basis (bps)
+and liquidity depth ratio are computed correctly, SEC EDGAR links format to
+valid 10-digit CIK profiles, and concentration flags fire at exact thresholds.
 
 ## Deploy
 
@@ -283,22 +284,24 @@ One click via [`render.yaml`](render.yaml) — create a new Blueprint and paste 
 repo URL. `CMC_API_KEY` is marked `sync: false`, so Render asks for it in the
 dashboard rather than reading it out of the repo.
 
-The issuer join is built once at startup in a background thread (~60 API calls,
-cached for 6 hours in memory and on disk), so a cold start never blocks a
-request past a host's timeout.
+A pre-compiled static seed (`data/seed_cache.json.gz`, 354KB) is bundled so cold starts
+on Render boot in **5 milliseconds** with zero initial API credits consumed and zero
+rate-limit exposure. Live pricing refreshes dynamically against CoinMarketCap.
 
 ## Endpoint reference
 
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/health` | plan, credit budget, whether a key is configured |
-| `GET` | `/api/capabilities` | live probe of every endpoint above |
+| `GET` | `/api/capabilities` | live probe of every CMC endpoint used |
+| `GET` | `/api/evidence/sample` | verbatim payloads for interactive API console |
 | `GET` | `/api/issuers` | all issuers, most tokens first |
 | `GET` | `/api/search?q=` | native crypto + tokenised wrappers |
-| `POST` | `/api/evaluate` | the whole roll-up; `{"positions": [...]}` or `{"demo": true}` |
+| `POST` | `/api/evaluate` | full roll-up, HHI & stress test; client-side positions |
+| `GET` | `/api/scan-wallet?address=&preset=` | EVM on-chain RWA balance scan or institutional presets |
 | `POST` | `/api/import` | pasted CSV → priced positions; `{"csv": "NVDAX,90,178.40\n…"}` |
-| `GET` | `/api/demo` | the demo book above |
-| `GET` | `/api/asset/<rwa_id>` | underlying company metadata |
+| `GET` | `/api/demo` | the demo book above with resilient offline fallback |
+| `GET` | `/api/asset/<rwa_id>` | underlying company metadata (SEC CIK, industry) |
 
 A position is `{id, crypto_id, quantity, cost_basis}` — `cost_basis` is average
 USD paid per unit, entered by hand because there is no price-history endpoint.

@@ -198,5 +198,35 @@ class TestFlags(unittest.TestCase):
         self.assertEqual(f["level"], "warn")
 
 
+class TestInstitutionalMetrics(unittest.TestCase):
+    def test_compare_wrappers_spread_and_liquidity(self):
+        rows = [
+            row(1, 101, value=100.0, cost=90.0, rwa_id=2, issuer_id="a",
+                issuer_name="Issuer A", volume_24h=1_000_000.0),
+            row(2, 102, value=102.0, cost=90.0, rwa_id=2, issuer_id="b",
+                issuer_name="Issuer B", volume_24h=100_000.0),
+        ]
+        # fake prices
+        rows[0]["price"] = 100.0
+        rows[1]["price"] = 101.5
+        comp = compare_wrappers(rows)
+        self.assertEqual(len(comp), 1)
+        w = comp[0]["wrappers"]
+        self.assertEqual(w[0]["symbol"], "T101")  # deepest market first
+        self.assertIsNone(w[0]["spread_bps"])     # base wrapper
+        self.assertEqual(w[1]["spread_bps"], 150.0) # +1.5% = +150 bps
+        self.assertEqual(w[1]["liquidity_ratio"], 10.0) # 1M / 100k = 10x
+
+    def test_edgar_url_generation(self):
+        r = row(1, 101, value=100.0, cost=90.0, rwa_id=2, issuer_id="a", issuer_name="A")
+        r["company"] = {"cik": "1045810", "name": "Nvidia Corp"}
+        underlying = by_underlying([r])
+        self.assertEqual(len(underlying), 1)
+        self.assertEqual(
+            underlying[0]["edgar_url"],
+            "https://www.sec.gov/edgar/browse/?CIK=0001045810",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

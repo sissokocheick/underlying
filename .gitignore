@@ -7,3 +7,4 @@ node_modules/
 # regenerable API cache (~2.5MB) and local server log
 data/cache.json
 data/server.log
+scratch/
