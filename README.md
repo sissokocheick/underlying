@@ -331,3 +331,4 @@ resolve are returned, not swallowed:
 - **Original work**, built for this hackathon, using the campaign-issued key.
 - **One track** selected: Real World Assets (the rules disallow multiple).
 - Competitor research and the gap analysis: [`docs/RESEARCH_competitors.md`](docs/RESEARCH_competitors.md).
+"# underlying" 
