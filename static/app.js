@@ -857,5 +857,54 @@ async function loadCapabilitiesAndExplorer() {
   } catch (e) {}
 }
 
+/* ---------- Modals (Methodology & CMC Feedback) ---------- */
+function openModal(id) {
+  const m = $("#" + id);
+  if (m) m.classList.remove("hidden");
+}
+function closeModal(id) {
+  const m = $("#" + id);
+  if (m) m.classList.add("hidden");
+}
+function closeAllModals() {
+  $$(".modal-backdrop").forEach((m) => m.classList.add("hidden"));
+}
+
+$("#navMethodologyBtn")?.addEventListener("click", () => openModal("methodologyModal"));
+$("#openMathBtn")?.addEventListener("click", () => openModal("methodologyModal"));
+$("#navFeedbackBtn")?.addEventListener("click", () => openModal("feedbackModal"));
+$("#openFeedbackBtn")?.addEventListener("click", () => openModal("feedbackModal"));
+$("#viewFeedbackInTerminalBtn")?.addEventListener("click", () => openModal("feedbackModal"));
+
+$$(".modal-close-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const id = btn.dataset.close;
+    if (id) closeModal(id);
+    else closeAllModals();
+  });
+});
+
+$$(".modal-backdrop").forEach((backdrop) => {
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeAllModals();
+  });
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeAllModals();
+});
+
+/* ---------- Tweet Submission with #BuildwithCMC ---------- */
+$("#tweetBtn")?.addEventListener("click", () => {
+  const text = encodeURIComponent("Auditing tokenised RWAs past the ticker down to the SEC CIK and legal collateral custodian. Check out Underlying built for the @CoinMarketCap API Hackathon on @DoraHacks! #BuildwithCMC");
+  const url = encodeURIComponent("https://github.com/sissokocheick/underlying");
+  window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank", "noopener,noreferrer");
+});
+
+/* ---------- Print Audit Report ---------- */
+$("#printAuditBtn")?.addEventListener("click", () => {
+  window.print();
+});
+
 refresh();
 loadCapabilitiesAndExplorer();
