@@ -126,7 +126,9 @@ function renderGroups(el, groups, subs, showIssuers) {
   el.innerHTML = groups
     .map((g) => {
       const sub = showIssuers
-        ? `${g.n_wrappers} wrapper${g.n_wrappers > 1 ? "s" : ""} · ${g.issuers.length} issuer${g.issuers.length > 1 ? "s" : ""}: ${esc(g.issuers.join(", "))}`
+        ? (g.issuers.length
+            ? `${g.n_wrappers} wrapper${g.n_wrappers > 1 ? "s" : ""} · ${g.issuers.length} issuer${g.issuers.length > 1 ? "s" : ""}: ${esc(g.issuers.join(", "))}`
+            : `${g.n_wrappers} wrapper · native crypto, no issuer`)
             + (g.cik ? `<div class="sub">SEC CIK ${esc(g.cik)} · ${esc(g.industry || "")}</div>` : "")
             + (g.website ? `<div class="sub"><a href="${esc(g.website)}" target="_blank" rel="noopener">${esc(g.website)}</a></div>` : "")
         : `${g.n_positions} position${g.n_positions > 1 ? "s" : ""}`;
