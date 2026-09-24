@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css?v=3.1">
+<link rel="stylesheet" href="/style.css?v=3.2">
 </head>
 <body>
 <div class="ambient-glow top-left"></div>
@@ -384,23 +384,23 @@
 </main>
 
 <!-- Methodology Modal -->
-<div id="methodologyModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+<div id="methodologyModal" class="modal-backdrop hidden" style="display:none" role="dialog" aria-modal="true" onclick="if(event.target===this){this.style.display='none';this.classList.add('hidden');document.body.style.overflow='';}">
   <div class="modal-card">
     <div class="modal-header">
       <div>
         <div class="sec-tag">RISK QUANTIFICATION</div>
         <h3>Mathematical Framework &amp; Methodology</h3>
       </div>
-      <button class="modal-close-btn" data-close="methodologyModal">×</button>
+      <button type="button" class="modal-close-btn" data-close="methodologyModal" onclick="document.getElementById('methodologyModal').style.display='none';document.getElementById('methodologyModal').classList.add('hidden');document.body.style.overflow='';">✕ Close</button>
     </div>
     <div class="modal-body">
       <div class="method-section">
         <h4>1. Herfindahl-Hirschman Index (HHI) for Counterparty Risk</h4>
         <p>In traditional antitrust and financial regulation (US Department of Justice / Federal Reserve), HHI measures market concentration across participants:</p>
         <div class="math-box">
-          $$HHI = \sum_{i=1}^{N} s_i^2$$
+          HHI = &sum; (s<sub>i</sub>)<sup>2</sup> &nbsp;&nbsp;[for i = 1 &hellip; N]
         </div>
-        <p>where $s_i$ is the percentage share (from 0 to 100) of total portfolio collateral held by custodian/issuer $i$.</p>
+        <p>where <b>s<sub>i</sub></b> is the percentage share (from 0 to 100) of total portfolio collateral held by custodian/issuer <b>i</b>.</p>
         <ul>
           <li><b>&lt; 1,500</b>: Well-Diversified Portfolio (Unconcentrated).</li>
           <li><b>1,500 – 2,500</b>: Moderate Concentration Risk.</li>
@@ -412,7 +412,7 @@
         <h4>2. Basis Spread Calculation (BPS)</h4>
         <p>Measures the pricing discrepancy between the secondary token wrapper traded on DEXes and the underlying stock's primary market price:</p>
         <div class="math-box">
-          $$\text{Spread (bps)} = \left(\frac{P_{\text{wrapper}} - P_{\text{equity}}}{P_{\text{equity}}}\right) \times 10{,}000$$
+          Spread (bps) = ((P<sub>wrapper</sub> &minus; P<sub>equity</sub>) / P<sub>equity</sub>) &times; 10,000
         </div>
         <p>Negative basis (e.g. -14 bps) signals an illiquid secondary market trading at a discount due to exit friction.</p>
       </div>
@@ -422,21 +422,24 @@
         <p>Every token wrapper resolved by Underlying maps via CoinMarketCap's <code>/v5/real-world-assets/info</code> endpoint to the <b>SEC Central Index Key (CIK)</b> of the underlying company. This allows institutional compliance officers to jump directly to official 10-K, 10-Q, and 8-K filings on the SEC's EDGAR database.</p>
       </div>
     </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-close-btn" data-close="methodologyModal" onclick="document.getElementById('methodologyModal').style.display='none';document.getElementById('methodologyModal').classList.add('hidden');document.body.style.overflow='';">Close Window</button>
+    </div>
   </div>
 </div>
 
 <!-- CMC API Engineering Feedback Modal -->
-<div id="feedbackModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+<div id="feedbackModal" class="modal-backdrop hidden" style="display:none" role="dialog" aria-modal="true" onclick="if(event.target===this){this.style.display='none';this.classList.add('hidden');document.body.style.overflow='';}">
   <div class="modal-card">
     <div class="modal-header">
       <div>
         <div class="sec-tag">DIRECT FEEDBACK FOR CMC PRODUCT TEAM</div>
         <h3>CoinMarketCap API Engineering Review</h3>
       </div>
-      <button class="modal-close-btn" data-close="feedbackModal">×</button>
+      <button type="button" class="modal-close-btn" data-close="feedbackModal" onclick="document.getElementById('feedbackModal').style.display='none';document.getElementById('feedbackModal').classList.add('hidden');document.body.style.overflow='';">✕ Close</button>
     </div>
     <div class="modal-body">
-      <p class="muted small">As requested in the hackathon brief (*"Tell us where the API got in the way... that feedback goes straight to the product team"*), here is our technical audit from building Underlying:</p>
+      <p class="muted small">As requested in the hackathon brief (<i>"Tell us where the API got in the way... that feedback goes straight to the product team"</i>), here is our technical audit from building Underlying:</p>
 
       <div class="feedback-item positive">
         <h4>🌟 1. What the CMC RWA API Made Possible ("The Breakthrough")</h4>
@@ -461,11 +464,14 @@
         <p><b>Recommendation for CMC:</b> Include standardized <b>ISIN</b> (International Securities Identification Number) and <b>LEI</b> (Legal Entity Identifier) in <code>/v5/real-world-assets/info</code> to support truly global TradFi compliance.</p>
       </div>
     </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-close-btn" data-close="feedbackModal" onclick="document.getElementById('feedbackModal').style.display='none';document.getElementById('feedbackModal').classList.add('hidden');document.body.style.overflow='';">Close Window</button>
+    </div>
   </div>
 </div>
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="/app.js?v=3.1"></script>
+<script src="/app.js?v=3.2"></script>
 </body>
 </html>

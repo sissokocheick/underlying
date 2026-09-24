@@ -859,16 +859,34 @@ async function loadCapabilitiesAndExplorer() {
 
 /* ---------- Modals (Methodology & CMC Feedback) ---------- */
 function openModal(id) {
-  const m = $("#" + id);
-  if (m) m.classList.remove("hidden");
+  const m = document.getElementById(id);
+  if (m) {
+    m.classList.remove("hidden");
+    m.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
 }
+
 function closeModal(id) {
-  const m = $("#" + id);
-  if (m) m.classList.add("hidden");
+  const m = document.getElementById(id);
+  if (m) {
+    m.classList.add("hidden");
+    m.style.display = "none";
+    document.body.style.overflow = "";
+  }
 }
+
 function closeAllModals() {
-  $$(".modal-backdrop").forEach((m) => m.classList.add("hidden"));
+  document.querySelectorAll(".modal-backdrop").forEach((m) => {
+    m.classList.add("hidden");
+    m.style.display = "none";
+  });
+  document.body.style.overflow = "";
 }
+
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.closeAllModals = closeAllModals;
 
 $("#navMethodologyBtn")?.addEventListener("click", () => openModal("methodologyModal"));
 $("#openMathBtn")?.addEventListener("click", () => openModal("methodologyModal"));
@@ -876,23 +894,27 @@ $("#navFeedbackBtn")?.addEventListener("click", () => openModal("feedbackModal")
 $("#openFeedbackBtn")?.addEventListener("click", () => openModal("feedbackModal"));
 $("#viewFeedbackInTerminalBtn")?.addEventListener("click", () => openModal("feedbackModal"));
 
-$$(".modal-close-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const id = btn.dataset.close;
+// Global event delegation for modal close buttons & backdrop click
+document.addEventListener("click", (e) => {
+  const closeBtn = e.target.closest(".modal-close-btn");
+  if (closeBtn) {
+    e.preventDefault();
+    const id = closeBtn.dataset.close;
     if (id) closeModal(id);
     else closeAllModals();
-  });
-});
-
-$$(".modal-backdrop").forEach((backdrop) => {
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) closeAllModals();
-  });
+    return;
+  }
+  if (e.target.classList.contains("modal-backdrop")) {
+    closeAllModals();
+  }
 });
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeAllModals();
 });
+
+// Ensure all modals are closed initially
+closeAllModals();
 
 /* ---------- Tweet Submission with #BuildwithCMC ---------- */
 $("#tweetBtn")?.addEventListener("click", () => {

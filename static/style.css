@@ -33,6 +33,9 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
 
 body {
   margin: 0;
@@ -1646,17 +1649,22 @@ footer {
   color: var(--ink);
 }
 .modal-close-btn {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 24px;
-  line-height: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: color 0.15s ease;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .modal-close-btn:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: var(--bad);
   color: var(--bad);
 }
 .modal-body {
@@ -1664,6 +1672,13 @@ footer {
   overflow-y: auto;
   font-size: 13.5px;
   line-height: 1.6;
+}
+.modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+  background: rgba(14, 20, 32, 0.6);
+  display: flex;
+  justify-content: flex-end;
 }
 .method-section {
   margin-bottom: 22px;
