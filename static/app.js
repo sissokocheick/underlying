@@ -229,11 +229,13 @@ function renderGroups(el, groups, subs, showIssuers) {
       }
 
       return `
-        <div class="roll-row">
-          <div class="roll-bar-line">
-            <span class="roll-nm" title="${esc(g.name)}">${esc(g.name)}</span>
-            <div class="roll-track"><div class="roll-fill" style="width:${(g.share * 100).toFixed(1)}%"></div></div>
-            <span class="roll-pc">${pct(g.share)}</span>
+        <div class="roll-item">
+          <div class="roll-head">
+            <span class="roll-title" title="${esc(g.name)}">${esc(g.name)}</span>
+            <span class="roll-pct">${pct(g.share)}</span>
+          </div>
+          <div class="roll-track">
+            <div class="roll-fill" style="width:${Math.max((g.share * 100), g.share > 0 ? 2 : 0).toFixed(1)}%"></div>
           </div>
           <div class="roll-meta-block">
             ${metaHtml}
