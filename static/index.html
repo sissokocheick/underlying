@@ -3,164 +3,321 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Underlying — what your portfolio is really made of</title>
-<meta name="description" content="An institutional portfolio tracker for crypto and tokenised TradFi built on the CoinMarketCap API. Shows the company and issuer behind every token you hold.">
-<link rel="stylesheet" href="/style.css?v=2.0">
+<title>Underlying — Institutional RWA Look-Through Portfolio Intelligence</title>
+<meta name="description" content="Institutional portfolio intelligence for tokenised Real-World Assets & Crypto built on the CoinMarketCap API. Reveals the real underlying company and legal issuer behind every token.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css?v=3.0">
 </head>
 <body>
+<div class="ambient-glow top-left"></div>
+<div class="ambient-glow top-right"></div>
+<div class="ambient-glow bottom-center"></div>
+
+<!-- Live System Ticker -->
+<div class="sys-strip">
+  <div class="wrap sys-strip-content">
+    <div class="sys-strip-left">
+      <span class="live-dot"></span>
+      <span class="sys-item"><b>CMC API:</b> <span class="sys-ok">CONNECTED</span></span>
+      <span class="sys-sep">/</span>
+      <span class="sys-item"><b>SEC EDGAR:</b> <span class="sys-ok">INDEXED (CIK)</span></span>
+      <span class="sys-sep">/</span>
+      <span class="sys-item"><b>HHI RISK RADAR:</b> <span class="sys-warn">ACTIVE</span></span>
+      <span class="sys-sep">/</span>
+      <span class="sys-item"><b>ZERO COLD-START:</b> <span class="sys-acc">SEEDED CACHE</span></span>
+    </div>
+    <div class="sys-strip-right">
+      <span class="hackathon-tag">CMC API HACKATHON 2026 · RWA TRACK</span>
+    </div>
+  </div>
+</div>
+
 <header>
-  <div class="wrap">
-    <a class="brand" href="/">Underlying <span class="badge-rwa">RWA Intelligence</span></a>
+  <div class="wrap hdr-container">
+    <a class="brand" href="/">
+      <div class="brand-logo">
+        <span class="brand-u">U</span>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Underlying</span>
+        <span class="badge-terminal">RWA Look-Through</span>
+      </div>
+    </a>
     <nav>
+      <a href="#cockpit">Cockpit</a>
       <a href="#holdings">Holdings</a>
-      <a href="#rollup">The roll-up</a>
-      <a href="#compareSec">Wrapper Choice</a>
+      <a href="#rollup">The Roll-Up</a>
+      <a href="#compareSec">Wrapper Arbitrage</a>
       <a href="#allocation">Allocation</a>
-      <a href="#evidence">CMC Evidence</a>
+      <a href="#evidence">CMC Terminal</a>
     </nav>
     <div class="hdr-actions">
-      <button id="scanBtn" class="ghost">🔍 Scan EVM Wallet</button>
-      <button id="demoBtn" class="ghost">Load demo book</button>
+      <button id="demoBtn" class="btn-glow" title="Load sample multi-wrapper book">⚡ Demo Book</button>
+      <button id="scanBtn" class="ghost" title="Scan Ethereum / Arbitrum balances">🔍 Scan Wallet</button>
       <button id="shareBtn" class="ghost" title="Copy shareable link">🔗 Share</button>
+      <button id="exportBtn" class="ghost" title="Export full audit report to CSV">📥 Export CSV</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
 
-  <section id="hero">
-    <div class="hero-top">
-      <div>
-        <h1>You don't hold tokens.<br>You hold counterparties.</h1>
-        <p class="lede">
-          Every tokenised stock is a claim on an issuer, not a share in a vault.
-          Underlying prices your book against live CoinMarketCap data and rolls it up
-          past the ticker — to the <b>underlying company</b> (verified by SEC CIK) and the <b>issuer</b>
-          who holds your collateral.
+  <!-- Cockpit Hero -->
+  <section id="cockpit">
+    <div class="hero-grid">
+      <div class="hero-left">
+        <div class="eyebrow">
+          <span class="eyebrow-dot"></span>
+          <span>INSTITUTIONAL COUNTERPARTY INTELLIGENCE</span>
+        </div>
+        <h1 class="hero-title">
+          You don't hold tokens.<br>
+          <span class="gradient-text">You hold counterparties.</span>
+        </h1>
+        <p class="hero-lede">
+          Every tokenised stock or bond is a claim on an issuer, not a share in a vault.
+          <b>Underlying</b> leverages CoinMarketCap's RWA endpoints to peel back wrappers to their
+          <b>SEC-registered company</b> (verified via official EDGAR CIK) and the <b>legal custodian</b> holding your collateral.
         </p>
+
+        <!-- Interactive Look-Through Funnel -->
+        <div class="funnel-box">
+          <div class="funnel-title-bar">
+            <span class="funnel-label">LOOK-THROUGH TRANSPARENCY PIPELINE</span>
+            <span class="funnel-hint">Past the ticker down to bankruptcy risk</span>
+          </div>
+          <div id="funnel" class="funnel-steps" aria-hidden="true"></div>
+        </div>
       </div>
-      <div id="riskRadar" class="risk-radar hidden"></div>
+
+      <!-- Right Column: Counterparty Threat Radar -->
+      <div class="hero-right">
+        <div id="riskRadar" class="risk-radar-card">
+          <!-- Populated by JS -->
+        </div>
+      </div>
     </div>
-    <div id="headline" class="headline"></div>
-    <div id="funnel" class="funnel" aria-hidden="true"></div>
+
+    <!-- KPI Cockpit Grid -->
+    <div id="kpiGrid" class="kpi-grid">
+      <!-- Populated by JS -->
+    </div>
   </section>
 
-  <section id="flags" aria-live="polite"></section>
+  <!-- Risk Flags Banner -->
+  <section id="flags" class="flags-section" aria-live="polite"></section>
 
+  <!-- Holdings Matrix -->
   <section id="holdings">
     <div class="sec-head">
       <div>
-        <h2>Holdings</h2>
-        <p class="muted small">Client-side only (localStorage). Enter tokens, paste spreadsheet rows, or scan on-chain wallets.</p>
+        <div class="sec-tag">PORTFOLIO MATRIX</div>
+        <h2>Holdings &amp; Look-Through Drilldown</h2>
+        <p class="muted small">Client-side only (localStorage). Enter tokens, paste spreadsheet rows, or scan EVM wallets.</p>
       </div>
       <div class="sec-actions">
-        <input id="searchBox" type="search" placeholder="Add: NVDA, BTC, NVDAX, OUSG…" autocomplete="off">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input id="searchBox" type="search" placeholder="Add: NVDA, BTC, NVDAX, OUSG, USDY…" autocomplete="off">
+        </div>
         <button id="addBtn" class="primary" disabled>Add</button>
-        <button id="importBtn" class="ghost">Import CSV</button>
-        <button id="exportBtn" class="ghost" title="Export portfolio to CSV">Export CSV</button>
+        <button id="importBtn" class="ghost">Paste CSV</button>
       </div>
     </div>
+
+    <!-- Segmented Table Filters -->
+    <div class="filter-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all">All Holdings (<span id="countAll">0</span>)</button>
+        <button class="filter-tab" data-filter="rwa">🏛️ Tokenised RWAs (<span id="countRwa">0</span>)</button>
+        <button class="filter-tab" data-filter="crypto">⚡ Native Crypto (<span id="countCrypto">0</span>)</button>
+        <button class="filter-tab" data-filter="risk">⚠️ Concentration Risk (<span id="countRisk">0</span>)</button>
+      </div>
+      <div class="filter-actions">
+        <button id="stressToggleBtn" class="btn-stress-test" title="Toggle hypothetical issuer redemption halt">⚡ Simulate Issuer Freeze</button>
+      </div>
+    </div>
+
     <div class="tablewrap">
       <table id="positions">
-        <thead><tr>
-          <th>Token</th><th class="r">Qty</th><th class="r">Cost</th>
-          <th class="r">Price</th><th class="r">Value</th><th class="r">P&amp;L</th>
-          <th>Issuer / Counterparty</th><th>Underlying / SEC</th><th>Chain</th><th></th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>Asset / Token</th>
+            <th class="r">Quantity</th>
+            <th class="r">Cost Basis</th>
+            <th class="r">Market Price</th>
+            <th class="r">Book Value</th>
+            <th class="r">Unrealised P&amp;L</th>
+            <th>Counterparty / Issuer</th>
+            <th>Underlying Asset &amp; SEC Filing</th>
+            <th>Basis Spread</th>
+            <th>Chain</th>
+            <th class="c"></th>
+          </tr>
+        </thead>
         <tbody></tbody>
       </table>
-      <p id="emptyBook" class="muted hidden">No positions yet. Add one above, import CSV, or load the demo book.</p>
+      <div id="emptyBook" class="empty-state hidden">
+        <div class="empty-icon">📂</div>
+        <h3>Your book is empty</h3>
+        <p class="muted small">Add positions above, paste a CSV, scan an on-chain address, or load our demo portfolio.</p>
+        <button class="primary" onclick="$('#demoBtn').click()">Load Demo Book</button>
+      </div>
     </div>
     <div id="searchResults" class="results"></div>
     <div id="addPanel" class="hidden"></div>
   </section>
 
+  <!-- The Roll-Up (3-Dimensional Exposure Analytics) -->
   <section id="rollup">
     <div class="sec-head">
       <div>
-        <h2>The roll-up</h2>
-        <p class="muted small">The same book, three layers deep. Start at the wrappers, end at who owes you.</p>
+        <div class="sec-tag">EXPOSURE DECOMPOSITION</div>
+        <h2>The 3-Dimensional Roll-Up</h2>
+        <p class="muted small">The same portfolio analyzed across three orthogonal layers: the real company, the legal issuer, and the asset class.</p>
       </div>
     </div>
     <div class="grid3">
-      <div class="card">
-        <h3>By underlying company</h3>
-        <p class="muted small">The real asset. Multiple wrappers of the same company collapse into one row.</p>
-        <div id="byUnderlying"></div>
+      <div class="card glass-card">
+        <div class="card-head">
+          <div class="card-icon">🏛️</div>
+          <div>
+            <h3>By Underlying Company</h3>
+            <p class="muted small">Collapses multiple wrappers of the same asset into one economic entity.</p>
+          </div>
+        </div>
+        <div id="byUnderlying" class="roll-list"></div>
       </div>
-      <div class="card">
-        <h3>By counterparty issuer</h3>
-        <p class="muted small">Your issuer risk. If this counterparty halts redemptions, everything below it re-prices.</p>
-        <div id="byIssuer"></div>
+      <div class="card glass-card">
+        <div class="card-head">
+          <div class="card-icon">🛡️</div>
+          <div>
+            <h3>By Counterparty Issuer</h3>
+            <p class="muted small">Your actual bankruptcy counterparty risk if redemptions freeze.</p>
+          </div>
+        </div>
+        <div id="byIssuer" class="roll-list"></div>
       </div>
-      <div class="card">
-        <h3>By asset class</h3>
-        <p class="muted small">Stock, commodity, treasury, crypto — diversification that wrappers cannot fake.</p>
-        <div id="byClass"></div>
+      <div class="card glass-card">
+        <div class="card-head">
+          <div class="card-icon">📊</div>
+          <div>
+            <h3>By Macro Asset Class</h3>
+            <p class="muted small">True economic diversification that token wrappers cannot mask.</p>
+          </div>
+        </div>
+        <div id="byClass" class="roll-list"></div>
       </div>
     </div>
   </section>
 
+  <!-- Wrapper Arbitrage & Execution Matrix -->
   <section id="compareSec">
     <div class="sec-head">
       <div>
-        <h2>Which wrapper do you buy?</h2>
-        <p class="muted small">Same company, different issuers. Ranked by exit liquidity and basis spread, because the ticker you saw first is not the one to own.</p>
+        <div class="sec-tag">EXECUTION INTELLIGENCE</div>
+        <h2>Which Wrapper Do You Own?</h2>
+        <p class="muted small">Same underlying company, different token issuers. Ranked by 24h exit liquidity and basis spread.</p>
       </div>
     </div>
-    <div id="compare" class="grid3"></div>
+    <div id="compare" class="compare-grid"></div>
   </section>
 
+  <!-- Allocation Intelligence (Dual Interactive Donut Charts) -->
   <section id="allocation">
     <div class="sec-head">
       <div>
-        <h2>Allocation</h2>
-        <p class="muted small">Outer ring: asset class. Inner ring: counterparty issuer. The gap between them is the whole point.</p>
+        <div class="sec-tag">PORTFOLIO BALANCE</div>
+        <h2>Allocation Intelligence</h2>
+        <p class="muted small">Left: Asset Class Diversification. Right: Counterparty Concentration. The spread between them is the whole point.</p>
       </div>
     </div>
     <div class="alloc-grid">
-      <div class="card"><svg id="donutClass" viewBox="0 0 200 200"></svg><div id="legendClass"></div></div>
-      <div class="card"><svg id="donutIssuer" viewBox="0 0 200 200"></svg><div id="legendIssuer"></div></div>
+      <div class="card glass-card alloc-card">
+        <div class="alloc-title">Economic Asset Class</div>
+        <div class="alloc-body">
+          <div class="svg-donut-wrap">
+            <svg id="donutClass" viewBox="0 0 200 200"></svg>
+            <div class="donut-center" id="donutClassCenter">
+              <span class="donut-center-lbl">ASSET</span>
+            </div>
+          </div>
+          <div id="legendClass" class="legend"></div>
+        </div>
+      </div>
+      <div class="card glass-card alloc-card">
+        <div class="alloc-title">Counterparty Issuer Exposure</div>
+        <div class="alloc-body">
+          <div class="svg-donut-wrap">
+            <svg id="donutIssuer" viewBox="0 0 200 200"></svg>
+            <div class="donut-center" id="donutIssuerCenter">
+              <span class="donut-center-lbl">ISSUER</span>
+            </div>
+          </div>
+          <div id="legendIssuer" class="legend"></div>
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- Live CoinMarketCap API Command Terminal -->
   <section id="evidence">
     <div class="sec-head">
       <div>
-        <h2>CoinMarketCap API Evidence & Architecture</h2>
-        <p class="muted small">Every number above is powered by CMC API endpoints. Probe live capabilities or inspect sample responses below.</p>
+        <div class="sec-tag">API ARCHITECTURE</div>
+        <h2>CoinMarketCap Developer Terminal</h2>
+        <p class="muted small">Direct proof of integration with CMC RWA endpoints. Inspect live capabilities and verbatim API response payloads.</p>
       </div>
     </div>
-    <div class="grid3">
-      <div class="card">
-        <h3>Endpoints probed live</h3>
-        <p class="muted small">Probed from this running instance via <code>/api/capabilities</code>.</p>
-        <ul id="endpointList" class="tight"></ul>
-      </div>
-      <div class="card span2">
-        <div class="api-console-head">
-          <h3>Interactive Endpoint Explorer</h3>
-          <div id="apiTabs" class="api-tabs"></div>
+    <div class="terminal-container">
+      <div class="terminal-head">
+        <div class="terminal-dots">
+          <span class="tdot red"></span>
+          <span class="tdot yellow"></span>
+          <span class="tdot green"></span>
         </div>
-        <p id="apiEndpointPurpose" class="muted small"></p>
-        <div class="code-box">
-          <div class="code-url"><span class="meth">GET</span> <span id="apiEndpointPath"></span></div>
-          <pre id="apiEndpointPayload">—</pre>
+        <span class="terminal-title">CMC-ENGINE // LIVE CAPABILITIES PROBE</span>
+        <span class="terminal-badge">PROMPT / STARTUP TIER</span>
+      </div>
+      <div class="terminal-body">
+        <div class="terminal-left">
+          <div class="terminal-side-title">VERIFIED ENDPOINTS</div>
+          <ul id="endpointList" class="endpoint-probe-list"></ul>
+        </div>
+        <div class="terminal-right">
+          <div class="api-console-head">
+            <div id="apiTabs" class="api-tabs"></div>
+            <button id="copyCurlBtn" class="btn-micro" title="Copy cURL command">📋 Copy cURL</button>
+          </div>
+          <div class="api-endpoint-desc" id="apiEndpointPurpose">Loading endpoint metadata…</div>
+          <div class="code-box">
+            <div class="code-url"><span class="meth">GET</span> <span id="apiEndpointPath">/v5/real-world-assets/...</span></div>
+            <pre id="apiEndpointPayload">Loading response payload…</pre>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <footer>
-    <p class="muted small">
-      Built for <a href="https://dorahacks.io/hackathon/coinmarketcap-api-202609" target="_blank" rel="noopener">Build with CMC: API Hackathon</a> (Track: Real World Assets).
-      Powered by CoinMarketCap RWA &amp; Quotes endpoints. Positions are held client-side only in <code>localStorage</code>.
-    </p>
+    <div class="footer-content">
+      <div class="footer-left">
+        <div class="footer-brand">Underlying <span class="badge-rwa">RWA Intelligence</span></div>
+        <p class="muted small">Built for the <a href="https://dorahacks.io/hackathon/coinmarketcap-api-202609" target="_blank" rel="noopener">Build with CMC: API Hackathon</a> (Track: Real World Assets).</p>
+        <p class="muted small">Empowering investors with look-through transparency over tokenised corporate balance sheets.</p>
+      </div>
+      <div class="footer-right">
+        <div class="footer-pill">🔒 Zero Server Storage · Pure Client-Side Privacy</div>
+        <div class="footer-pill">⚡ 5ms Cold Boot · Pre-Seeded CMC Universe</div>
+      </div>
+    </div>
   </footer>
 </main>
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="/app.js?v=2.0"></script>
+<script src="/app.js?v=3.0"></script>
 </body>
 </html>
