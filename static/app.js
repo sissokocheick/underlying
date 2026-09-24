@@ -202,18 +202,44 @@ function renderGroups(el, groups, subs, showIssuers) {
   if (!groups || !groups.length) { el.innerHTML = `<p class="muted small">Nothing priced yet.</p>`; return; }
   el.innerHTML = groups
     .map((g) => {
-      const sub = showIssuers
-        ? (g.issuers.length
-            ? `${g.n_wrappers} wrapper${g.n_wrappers > 1 ? "s" : ""} · ${g.issuers.length} issuer${g.issuers.length > 1 ? "s" : ""}: ${esc(g.issuers.join(", "))}`
-            : `${g.n_wrappers} wrapper · native crypto, no counterparty`)
-            + (g.cik ? `<div class="sub"><a class="cik-badge" href="${esc(g.edgar_url || 'https://www.sec.gov/edgar/browse/?CIK=' + g.cik)}" target="_blank" rel="noopener">SEC CIK ${esc(g.cik)}</a> · ${esc(g.industry || "")}</div>` : "")
-            + (g.website ? `<div class="sub"><a href="${esc(g.website)}" target="_blank" rel="noopener">${esc(g.website)}</a></div>` : "")
-        : `${g.n_positions} position${g.n_positions > 1 ? "s" : ""}`;
-      return `<div class="bar">
-        <div class="nm" title="${esc(g.name)}">${esc(g.name)}</div>
-        <div class="track"><div class="fill" style="width:${(g.share * 100).toFixed(1)}%"></div></div>
-        <div class="pc">${pct(g.share)}</div>
-      </div><div class="sub">${sub}</div>`;
+      let metaHtml = "";
+      if (showIssuers) {
+        const issuerDesc = g.issuers && g.issuers.length
+          ? `${g.n_wrappers} wrapper${g.n_wrappers > 1 ? "s" : ""} · ${g.issuers.length} issuer${g.issuers.length > 1 ? "s" : ""}: ${esc(g.issuers.join(", "))}`
+          : `${g.n_wrappers} wrapper · native crypto, no counterparty`;
+
+        let badges = [];
+        if (g.cik) {
+          badges.push(`<a class="cik-badge" href="${esc(g.edgar_url || 'https://www.sec.gov/edgar/browse/?CIK=' + g.cik)}" target="_blank" rel="noopener">SEC CIK ${esc(g.cik)} ↗</a>`);
+        }
+        if (g.industry) {
+          badges.push(`<span class="industry-badge">${esc(g.industry)}</span>`);
+        }
+        if (g.website) {
+          const prettyWeb = esc(g.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""));
+          badges.push(`<a class="web-link" href="${esc(g.website)}" target="_blank" rel="noopener">${prettyWeb} ↗</a>`);
+        }
+
+        metaHtml = `
+          <div class="roll-subtext">${esc(issuerDesc)}</div>
+          ${badges.length ? `<div class="roll-badges">${badges.join("")}</div>` : ""}
+        `;
+      } else {
+        metaHtml = `<div class="roll-subtext">${g.n_positions} position${g.n_positions > 1 ? "s" : ""}</div>`;
+      }
+
+      return `
+        <div class="roll-row">
+          <div class="roll-bar-line">
+            <span class="roll-nm" title="${esc(g.name)}">${esc(g.name)}</span>
+            <div class="roll-track"><div class="roll-fill" style="width:${(g.share * 100).toFixed(1)}%"></div></div>
+            <span class="roll-pc">${pct(g.share)}</span>
+          </div>
+          <div class="roll-meta-block">
+            ${metaHtml}
+          </div>
+        </div>
+      `;
     })
     .join("");
 }

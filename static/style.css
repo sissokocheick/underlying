@@ -191,12 +191,30 @@ button.del:hover { color: var(--bad); }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
 .card .small { color: var(--muted); margin: 0 0 12px; }
 
-.bar { display: flex; align-items: center; gap: 10px; margin: 9px 0; }
-.bar .nm { width: 150px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bar .track { flex: 1; height: 9px; background: var(--panel2); border-radius: 6px; overflow: hidden; }
-.bar .fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
-.bar .pc { width: 52px; text-align: right; font-size: 12.5px; color: var(--muted); }
-.sub { font-size: 12px; color: var(--muted); margin: -5px 0 8px 160px; }
+.roll-row { padding: 10px 0; border-bottom: 1px solid rgba(34, 42, 56, 0.6); }
+.roll-row:first-child { padding-top: 2px; }
+.roll-row:last-child { border-bottom: none; }
+.roll-bar-line { display: flex; align-items: center; gap: 10px; width: 100%; }
+.roll-nm {
+  font-weight: 600; font-size: 13.5px; color: var(--ink);
+  min-width: 105px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.roll-track { flex: 1; height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+.roll-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
+.roll-pc {
+  width: 46px; text-align: right; font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); font-weight: 600;
+}
+.roll-meta-block { margin-top: 5px; display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.roll-subtext { font-size: 12px; color: var(--muted); line-height: 1.4; word-break: break-word; }
+.roll-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+.industry-badge {
+  font-size: 11px; color: var(--muted); background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.web-link { font-size: 11px; color: var(--acc2); opacity: 0.85; }
+.web-link:hover { opacity: 1; text-decoration: underline; }
 
 .alloc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .alloc-grid .card { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
