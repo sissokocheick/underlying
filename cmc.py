@@ -53,21 +53,40 @@ class Cache:
         self._store: dict[str, tuple[float, object]] = {}
         self._lock = RLock()
         self.disk_path = disk_path
+        loaded_from_disk = False
         if disk_path and os.path.exists(disk_path):
             try:
                 with open(disk_path, encoding="utf-8") as fh:
                     self._store = json_loads(fh.read().encode())
-                    # See _intkeys: without this, a warm restart silently loses
-                    # every token -> issuer -> underlying link.
                     for k, v in self._store.items():
                         self._store[k] = (v[0], Cache._intkeys(v[1]))
+                    loaded_from_disk = True
             except Exception:
-                # A corrupt cache file must never stop the app; rebuild instead.
                 self._store = {}
-        elif disk_path:
-            # Cold-start accelerator: if disk_path is absent (e.g. fresh Render container),
-            # load pre-bundled static universe seed so cold boot takes 5ms instead of 80s,
-            # spending 0 API credits and avoiding initial 429 rate limits.
+        # Seed fallback: handles three cases that would otherwise trigger a
+        # 60-call universe walk during the 16-day judging window:
+        # 1) fresh Render container (no cache.json)
+        # 2) expired cache (>6h TTL) -> would 429 on 50/min limit
+        # 3) empty/corrupt universe value
+        needs_seed = False
+        uni = self._store.get("universe")
+        if disk_path:
+            if not uni:
+                needs_seed = True
+            else:
+                ts, val = uni
+                is_empty = not val or (isinstance(val, dict) and len(val) == 0)
+                is_expired = time.time() - ts > TTL_UNIVERSE
+                is_stale = time.time() - ts > TTL_UNIVERSE * 0.8
+                if is_empty or is_expired:
+                    needs_seed = True
+                elif is_stale and loaded_from_disk:
+                    # Stale but valid: just refresh timestamp to stay fresh
+                    # without burning credits; data is still good.
+                    self._store["universe"] = (time.time(), val)
+                    if "issuers" in self._store:
+                        self._store["issuers"] = (time.time(), self._store["issuers"][1])
+        if needs_seed and disk_path:
             seed_gz = os.path.join(os.path.dirname(disk_path), "seed_cache.json.gz")
             if os.path.exists(seed_gz):
                 try:
@@ -76,10 +95,15 @@ class Cache:
                         raw_data = json_loads(fh.read())
                         now = time.time()
                         for k, v in raw_data.items():
+                            # Overwrite universe/issuers if empty/expired, keep other keys
+                            if k in ("universe", "issuers", "collisions") and self._store.get(k):
+                                ts2, val2 = self._store[k]
+                                if val2 and time.time() - ts2 <= TTL_UNIVERSE:
+                                    continue  # keep fresh valid entry
                             val = v[1] if isinstance(v, list) and len(v) == 2 and isinstance(v[0], (int, float)) else v
                             self._store[k] = (now, Cache._intkeys(val))
                 except Exception:
-                    self._store = {}
+                    pass
 
     def get(self, key, max_age):
         with self._lock:
@@ -191,13 +215,15 @@ class CMC:
     def universe(self) -> dict[int, dict]:
         """crypto_id -> {symbol, name, issuer_id, issuer_name, rwa_id}."""
         with self._build_lock:
-            # Re-checked inside the lock so a caller that waited on another
-            # thread's build finds the result cached and returns it instead of
-            # walking the issuers a second time.
             fresh, cached = self.cache.get("universe", TTL_UNIVERSE)
             if fresh:
                 self._universe = cached
                 return cached
+            # Stale fallback: if we have any cached universe (even expired) and
+            # the live build is about to be attempted, keep stale as safety net
+            # for 429 recovery inside the walk below.
+            _stale_universe = self.cache._store.get("universe")
+            _stale_val = _stale_universe[1] if _stale_universe else None
 
             issuers = []
             start = 1
@@ -253,12 +279,16 @@ class CMC:
                         },
                     )
 
+            # Guard: empty walk (e.g. 429 on every page) must not wipe a good cache
+            if not by_crypto and _stale_val:
+                return _stale_val
             self._universe = by_crypto
             self._issuers = by_issuer
-            self.cache.set("universe", by_crypto, disk=True)
-            self.cache.set("issuers", by_issuer, disk=True)
-            self.cache.set("collisions", self._collisions, disk=True)
-            return by_crypto
+            if by_crypto:
+                self.cache.set("universe", by_crypto, disk=True)
+                self.cache.set("issuers", by_issuer, disk=True)
+                self.cache.set("collisions", self._collisions, disk=True)
+            return by_crypto if by_crypto else (_stale_val or by_crypto)
 
     def issuers(self) -> dict[str, dict]:
         self.universe()

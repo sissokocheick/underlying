@@ -230,7 +230,7 @@ def create_app() -> Flask:
                 "id": tok["crypto_id"],
             }).encode("utf-8")
             req = urllib.request.Request(
-                "https://cloudflare-eth.com",
+                "https://ethereum.publicnode.com",
                 data=rpc_body,
                 headers={"Content-Type": "application/json", "User-Agent": "Underlying-RWA/1.0"},
             )
